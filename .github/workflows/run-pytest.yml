@@ -1,0 +1,51 @@
+name: Run pytest
+
+# Advanced feature: fewer, smarter test runs.
+# 1. paths:       only run when code, tests, dependencies or this workflow change.
+#                 A change to a README or notes does not start a run.
+# 2. branches:    push runs on main only; other branches are tested when a pull
+#                 request into main is opened or updated. This stops the same
+#                 commit being tested twice (once for push, once for the PR).
+# 3. concurrency: if a new push arrives while an older run for the same branch
+#                 is still running, the older run is cancelled, because only the
+#                 latest commit matters.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/run-pytest.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/run-pytest.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pytest-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest with coverage
+        run: python -m pytest -v --cov=src --cov-report=term-missing
